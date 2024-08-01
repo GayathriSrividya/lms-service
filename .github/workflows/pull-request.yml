@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
       - name: Redis to store cache
-        uses: redislabs/redis:latest
+        uses: redislabs/redis@latest
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run test cases
