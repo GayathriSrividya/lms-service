@@ -6,43 +6,53 @@ on:
       - opened
       - synchronize
 
+name: Build and Report
+
 jobs:
-  run-test-cases:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-20.04
+
     services:
       redis:
-        image: redis
-        ports:
-          - 6379:6379
-      cassandra:
-        image: cassandra
-        ports:
-          - 9042:9042
+        image: redis:latest
+        options: --entrypoint redis-server
 
     steps:
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Maven
-        uses: actions/setup-java@v4
+      - name: Restore cache
+        uses: actions/cache@v2
         with:
-          distribution: 'temurin'
-          java-version: '11'
-          cache: 'maven'
+          path: ~/.m2
+          key: maven-dependency-cache-${{ hashFiles('**/pom.xml') }}
 
-      - name: Wait for Cassandra to be ready
+      - name: Update apt packages
+        run: sudo apt update
+
+      - name: Install Redis server
+        run: sudo apt install redis-server -y
+
+      - name: Build the code
+        run: mvn clean install -DCLOUD_STORE_GROUP_ID=${{ secrets.CLOUD_STORE_GROUP_ID }} -DCLOUD_STORE_ARTIFACT_ID=${{ secrets.CLOUD_STORE_ARTIFACT_ID }} -DCLOUD_STORE_VERSION=${{ secrets.CLOUD_STORE_VERSION }}
+
+      - name: Generate coverage report for enrolment-actor
         run: |
-          echo "Waiting for Cassandra to start..."
-          until docker exec ${{ job.services.cassandra.id }} cqlsh -e "describe keyspaces"; do
-            echo "Waiting for Cassandra..."
-            sleep 10
-          done
+          cd course-mw/enrolment-actor
+          mvn scoverage:report
 
-      - name: Run test cases
-        run: mvn clean install
+      - name: Generate coverage report for cache-utils
+        run: |
+          cd course-mw/sunbird-util/cache-utils
+          mvn scoverage:report
+
+      - name: Build service
+        run: |
+          cd service
+          mvn play2:dist
+
+      - name: Save cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: maven-dependency-cache-${{ hashFiles('**/pom.xml') }}
