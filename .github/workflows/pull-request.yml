@@ -6,8 +6,6 @@ on:
       - opened
       - synchronize
 
-name: Build and Report
-
 jobs:
   build:
     runs-on: ubuntu-20.04
