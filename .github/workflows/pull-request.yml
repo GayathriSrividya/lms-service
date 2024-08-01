@@ -32,7 +32,7 @@ jobs:
         run: sudo apt install redis-server -y
 
       - name: Build the code
-        run: mvn clean install -DCLOUD_STORE_GROUP_ID=${{ secrets.CLOUD_STORE_GROUP_ID }} -DCLOUD_STORE_ARTIFACT_ID=${{ secrets.CLOUD_STORE_ARTIFACT_ID }} -DCLOUD_STORE_VERSION=${{ secrets.CLOUD_STORE_VERSION }}
+        run: mvn clean install 
 
       - name: Generate coverage report for enrolment-actor
         run: |
