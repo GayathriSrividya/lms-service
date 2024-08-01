@@ -14,6 +14,9 @@ jobs:
       redis:
         image: redis:latest
         options: --entrypoint redis-server
+      cassandra:
+        image: cassandra:latest
+        options: --entrypoint cassandra -p 9042:9042
 
     steps:
       - name: Checkout code
