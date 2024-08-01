@@ -35,11 +35,11 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
           cache: 'maven'
-          
+
       - name: Wait for Cassandra to be ready
         run: |
           echo "Waiting for Cassandra to start..."
-          until cqlsh -e "describe keyspaces"; do
+          until docker exec ${{ job.services.cassandra.id }} cqlsh -e "describe keyspaces"; do
             echo "Waiting for Cassandra..."
             sleep 10
           done
