@@ -1,3 +1,5 @@
+# use redis container 
+
 name: pull-request
 
 on:
@@ -15,9 +17,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11'
-
+      - name: Redis to store cache
+        uses: redislabs/redis@v1
       - name: Checkout code
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v2
       - name: Run test cases
-        run: mvn clean install
+        run:  maven clean install 
