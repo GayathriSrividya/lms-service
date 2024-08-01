@@ -21,9 +21,16 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11'
-
+      
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set up Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: 'maven'
+          
       - name: Run test cases
-        run:  maven clean install 
+        run: mvn clean install
