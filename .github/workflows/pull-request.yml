@@ -14,6 +14,11 @@ jobs:
         image: redis
         ports:
           - 6379:6379
+      cassandra:
+        image: cassandra
+        ports:
+          - 9042:9042
+        options: --entrypoint "/usr/local/bin/docker-entrypoint.sh cassandra -f"
 
     steps:
       - name: Set up JDK 11
@@ -32,5 +37,12 @@ jobs:
           java-version: '11'
           cache: 'maven'
           
+      - name: Wait for Cassandra to be ready
+        run: |
+          until nc -z localhost 9042; do
+            echo "Waiting for Cassandra..."
+            sleep 5
+          done
+      
       - name: Run test cases
         run: mvn clean install
