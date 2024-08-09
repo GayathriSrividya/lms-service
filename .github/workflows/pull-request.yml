@@ -7,53 +7,27 @@ on:
       - synchronize
 
 jobs:
-  build:
-    runs-on: ubuntu-20.04
-
-    services:
-      redis:
-        image: redis:latest
-        options: --entrypoint redis-server
-      cassandra:
-        image: cassandra:latest
-        options: --entrypoint cassandra -p 9042:9042
-
+  run-test-cases:
+    runs-on: ubuntu-latest
     steps:
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Restore cache
-        uses: actions/cache@v2
+      - name: Restore Maven cache
+        uses: actions/cache@v3
         with:
           path: ~/.m2
-          key: maven-dependency-cache-${{ hashFiles('**/pom.xml') }}
+          key: groups-dependency-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            groups-dependency-cache-
 
-      - name: Update apt packages
-        run: sudo apt update
-
-      - name: Install Redis server
-        run: sudo apt install redis-server -y
-
-      - name: Build the code
-        run: mvn clean install 
-
-      - name: Generate coverage report for enrolment-actor
-        run: |
-          cd course-mw/enrolment-actor
-          mvn scoverage:report
-
-      - name: Generate coverage report for cache-utils
-        run: |
-          cd course-mw/sunbird-util/cache-utils
-          mvn scoverage:report
-
-      - name: Build service
-        run: |
-          cd service
-          mvn play2:dist
-
-      - name: Save cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: maven-dependency-cache-${{ hashFiles('**/pom.xml') }}
+      - name: Build and Run test cases
+        run: mvn clean install
