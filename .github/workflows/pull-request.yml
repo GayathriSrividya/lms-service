@@ -1,56 +1,64 @@
-name: pull-request
+name: Build and SonarQube Analysis
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
-    types:
-      - opened
-      - synchronize
+    branches:
+      - main
 
 jobs:
   build:
-    runs-on: openjdk:14-jdk-buster-node-browsers-legacy
+    runs-on: ubuntu-latest
 
     services:
       redis:
         image: redis:latest
-        options: --entrypoint redis-server
-      cassandra:
-        image: cassandra:latest
-        options: --entrypoint cassandra -p 9042:9042
+        ports:
+          - 6379:6379
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Restore cache
-        uses: actions/cache@v2
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
         with:
           path: ~/.m2
-          key: maven-dependency-cache-${{ hashFiles('**/pom.xml') }}
+          key: lms-dependency-cache-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
 
-      - name: Update apt packages
-        run: sudo apt update
+      - name: Update apt-get
+        run: sudo apt-get update
 
-      - name: Install Redis server
-        run: sudo apt install redis-server -y
+      - name: Install Redis
+        run: sudo apt-get install redis-server -y
 
-      - name: Build the code
+      - name: Build with Maven
         run: mvn clean install 
 
-      - name: Generate coverage report for enrolment-actor
-        run: |
-          cd course-mw/enrolment-actor
-          mvn scoverage:report
-      - name: Generate coverage report for cache-utils
-        run: |
-          cd course-mw/sunbird-util/cache-utils
-          mvn scoverage:report
-      - name: Build service
-        run: |
-          cd service
-          mvn play2:dist
-      - name: Save cache
-        uses: actions/cache@v2
+      - name: Generate Scoverage report for enrolment-actor
+        run: cd course-mw/enrolment-actor && mvn scoverage:report
+
+      - name: Generate Scoverage report for cache-utils
+        run: cd course-mw/sunbird-util/cache-utils && mvn scoverage:report
+
+      - name: Build Play Framework distribution
+        run: cd service && mvn play2:dist
+
+      - name: Cache Maven dependencies (post-build)
+        uses: actions/cache@v3
         with:
           path: ~/.m2
-          key: maven-dependency-cache-${{ hashFiles('**/pom.xml') }}
+          key: lms-dependency-cache-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+
+      # - name: SonarQube Analysis
+      #   run: |
+      #     JAVA_REPORT_PATHS=$(find $GITHUB_WORKSPACE -iname jacoco.xml | paste -sd ",")
+      #     mvn verify -DskipTests=true sonar:sonar \
+      #       -Dsonar.projectKey=project-sunbird_sunbird-course-service \
+      #       -Dsonar.organization=project-sunbird \
+      #       -Dsonar.host.url=https://sonarcloud.io \
+      #       -Dsonar.coverage.exclusions=**/sunbird-util/sunbird-platform-core/**,**/course-actors-common/** \
+      #       -Dsonar.scala.coverage.reportPaths=$GITHUB_WORKSPACE/course-mw/enrolment-actor/target/scoverage.xml,$GITHUB_WORKSPACE/course-mw/sunbird-util/cache-utils/target/scoverage.xml \
+      #       -Dsonar.coverage.jacoco.xmlReportPaths=${JAVA_REPORT_PATHS}
